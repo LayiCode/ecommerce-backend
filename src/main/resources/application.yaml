@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ecommerce-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ecommerce_db
+    username: postgres
+    password: Olamide310
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  default-produces-media-type: application/json
+
+jwt:
+  secret: "change-this-to-a-long-random-string-at-least-32-characters-long"
+  expiration-ms: 86400000  # 24 hours
+
+paystack:
+  secret-key: "sk_test_3a57061820f50451cd6f141249ea7c4088296f20"
+  base-url: "https://api.paystack.co"
