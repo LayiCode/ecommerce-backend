@@ -1,6 +1,7 @@
 package com.Group2.Ecommerce.Order;
 
 import com.Group2.Ecommerce.Common.ApiResponse;
+import com.Group2.Ecommerce.Order.Dto.CheckoutRequest;
 import com.Group2.Ecommerce.Order.Dto.OrderRequest;
 import com.Group2.Ecommerce.Order.Dto.OrderResponse;
 import com.Group2.Ecommerce.Order.Dto.OrderStatusUpdateRequest;
@@ -23,6 +24,13 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
         return ApiResponse.success("Order created", orderService.createOrder(request));
+    }
+
+    // Places an order directly from the logged-in user's current cart.
+    @PostMapping("/checkout")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<OrderResponse> checkout(@Valid @RequestBody CheckoutRequest request) {
+        return ApiResponse.success("Order placed from cart", orderService.checkoutFromCart(request.getAddressId()));
     }
 
     @GetMapping("/{id}")

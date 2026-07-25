@@ -1,5 +1,7 @@
 package com.Group2.Ecommerce.Order;
 
+import com.Group2.Ecommerce.Cart.CartItem;
+import com.Group2.Ecommerce.Cart.CartItemRepository;
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Order.Dto.OrderItemRequest;
 import com.Group2.Ecommerce.Order.Dto.OrderRequest;
@@ -28,57 +30,57 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductService productService;
     private final AddressRepository addressRepository;
+    private final CartItemRepository cartItemRepository;
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
         User currentUser = getCurrentUser();
-
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found: " + request.getAddressId()));
-
-        if (!address.getUser().getId().equals(currentUser.getId())) {
-            throw new ResourceNotFoundException("Address not found: " + request.getAddressId());
-        }
+        Address address = findOwnedAddress(request.getAddressId(), currentUser);
 
         List<OrderItemRequest> sortedItems = request.getItems().stream()
                 .sorted(Comparator.comparing(OrderItemRequest::getProductId))
                 .collect(Collectors.toList());
 
-        Order order = new Order();
-        order.setUser(currentUser);
-        order.setStatus(OrderStatus.PENDING);
-
-        // Snapshot the address at order time
-        order.setShippingFullName(address.getFullName());
-        order.setShippingLine1(address.getLine1());
-        order.setShippingLine2(address.getLine2());
-        order.setShippingCity(address.getCity());
-        order.setShippingState(address.getState());
-        order.setShippingPostalCode(address.getPostalCode());
-        order.setShippingCountry(address.getCountry());
-        order.setShippingPhone(address.getPhone());
-
-        BigDecimal total = BigDecimal.ZERO;
+        Order order = buildOrderShell(currentUser, address);
 
         for (OrderItemRequest itemRequest : sortedItems) {
-            productService.decrementStock(itemRequest.getProductId(), itemRequest.getQuantity());
-
-            Product product = productService.findEntityById(itemRequest.getProductId());
-
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(order);
-            orderItem.setProduct(product);
-            orderItem.setQuantity(itemRequest.getQuantity());
-            orderItem.setUnitPrice(product.getPrice());
-
-            order.getItems().add(orderItem);
-            total = total.add(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+            addItemToOrder(order, itemRequest.getProductId(), itemRequest.getQuantity());
         }
 
-        order.setTotalAmount(total);
-        Order saved = orderRepository.save(order);
+        return finalizeOrder(order);
+    }
 
-        return OrderResponse.fromEntity(saved);
+    // Checkout directly from the logged-in user's cart: reads every
+    // CartItem, converts each into an OrderItem using the same atomic
+    // stock-decrement path as manual order creation, then clears the cart
+    // once the order is successfully placed.
+    @Transactional
+    public OrderResponse checkoutFromCart(Long addressId) {
+        User currentUser = getCurrentUser();
+        Address address = findOwnedAddress(addressId, currentUser);
+
+        List<CartItem> cartItems = cartItemRepository.findByUserId(currentUser.getId());
+        if (cartItems.isEmpty()) {
+            throw new IllegalStateException("Cart is empty");
+        }
+
+        // Sort by product ID before locking, same deadlock-avoidance
+        // reasoning as the manual order path.
+        List<CartItem> sortedItems = cartItems.stream()
+                .sorted(Comparator.comparing(item -> item.getProduct().getId()))
+                .collect(Collectors.toList());
+
+        Order order = buildOrderShell(currentUser, address);
+
+        for (CartItem cartItem : sortedItems) {
+            addItemToOrder(order, cartItem.getProduct().getId(), cartItem.getQuantity());
+        }
+
+        OrderResponse response = finalizeOrder(order);
+
+        cartItemRepository.deleteAll(cartItems);
+
+        return response;
     }
 
     public OrderResponse getById(Long id) {
@@ -101,6 +103,60 @@ public class OrderService {
         Order saved = orderRepository.save(order);
 
         return OrderResponse.fromEntity(saved);
+    }
+
+    // --- shared helpers used by both createOrder and checkoutFromCart ---
+
+    private Order buildOrderShell(User currentUser, Address address) {
+        Order order = new Order();
+        order.setUser(currentUser);
+        order.setStatus(OrderStatus.PENDING);
+
+        order.setShippingFullName(address.getFullName());
+        order.setShippingLine1(address.getLine1());
+        order.setShippingLine2(address.getLine2());
+        order.setShippingCity(address.getCity());
+        order.setShippingState(address.getState());
+        order.setShippingPostalCode(address.getPostalCode());
+        order.setShippingCountry(address.getCountry());
+        order.setShippingPhone(address.getPhone());
+
+        return order;
+    }
+
+    private void addItemToOrder(Order order, Long productId, int quantity) {
+        productService.decrementStock(productId, quantity);
+
+        Product product = productService.findEntityById(productId);
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        orderItem.setQuantity(quantity);
+        orderItem.setUnitPrice(product.getPrice());
+
+        order.getItems().add(orderItem);
+    }
+
+    private OrderResponse finalizeOrder(Order order) {
+        BigDecimal total = order.getItems().stream()
+                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setTotalAmount(total);
+        Order saved = orderRepository.save(order);
+
+        return OrderResponse.fromEntity(saved);
+    }
+
+    private Address findOwnedAddress(Long addressId, User currentUser) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found: " + addressId));
+
+        if (!address.getUser().getId().equals(currentUser.getId())) {
+            throw new ResourceNotFoundException("Address not found: " + addressId);
+        }
+        return address;
     }
 
     private User getCurrentUser() {

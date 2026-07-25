@@ -1,7 +1,9 @@
+
+
 ```markdown
 # Ecommerce Backend
 
-A Spring Boot REST API backend for an e-commerce platform, built as a portfolio/learning project. Covers product catalog management, JWT-based authentication with role-based access control, order processing with race-condition-safe stock handling, address management, and payment integration via Paystack.
+A Spring Boot REST API backend for an e-commerce platform, built as a portfolio/learning project. Covers product catalog management, JWT-based authentication with role-based access control, a persistent server-side cart, order processing with race-condition-safe stock handling, address management, and payment integration via Paystack.
 
 ## Tech Stack
 
@@ -21,7 +23,8 @@ A Spring Boot REST API backend for an e-commerce platform, built as a portfolio/
 - **Categories** — CRUD
 - **Authentication** — register, login, JWT issuance, forgot/reset password
 - **Role-based access control** — `CUSTOMER` and `ADMIN` roles; product/category writes and order status updates are admin-only
-- **Orders** — atomic, race-condition-safe stock decrement (prevents overselling under concurrent requests), server-computed totals (never trusted from the client), address snapshotting at checkout time
+- **Cart** — persistent, server-side, tied to the logged-in user; add/update/remove items, auto-merges duplicate product entries
+- **Orders** — two ways to place an order: manually specifying items, or checking out directly from the cart. Both share the same atomic, race-condition-safe stock decrement (prevents overselling under concurrent requests), server-computed totals (never trusted from the client), and address snapshotting at checkout time
 - **Addresses** — saved shipping addresses per user
 - **Payments** — Paystack integration: transaction initialization, webhook handling with HMAC signature verification and idempotency protection against duplicate events
 - **Testing** — unit test coverage on core business logic (stock decrement, order creation, rollback behavior)
@@ -53,9 +56,9 @@ cd ecommerce-backend
    cp src/main/resources/application.yml.example src/main/resources/application.yml
    ```
    Then edit `application.yml` with:
-    - Your Postgres password
-    - A JWT secret (any long random string, 32+ characters)
-    - Your Paystack **test** secret key (from Paystack dashboard → Settings → API Keys & Webhooks)
+   - Your Postgres password
+   - A JWT secret (any long random string, 32+ characters)
+   - Your Paystack **test** secret key (from Paystack dashboard → Settings → API Keys & Webhooks)
 
 4. **Build and run**
    ```
@@ -85,10 +88,20 @@ cd ecommerce-backend
 | GET | `/api/categories` | Public |
 | POST | `/api/categories` | Admin |
 
+### Cart
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/cart` | Authenticated |
+| POST | `/api/cart/items` | Authenticated |
+| PUT | `/api/cart/items/{itemId}` | Authenticated (owner only) |
+| DELETE | `/api/cart/items/{itemId}` | Authenticated (owner only) |
+| DELETE | `/api/cart` | Authenticated |
+
 ### Orders
 | Method | Endpoint | Access |
 |---|---|---|
-| POST | `/api/orders` | Authenticated |
+| POST | `/api/orders` | Authenticated — place an order with explicit items |
+| POST | `/api/orders/checkout` | Authenticated — place an order from the current cart, then clears it |
 | GET | `/api/orders/{id}` | Authenticated |
 | GET | `/api/orders` (my orders) | Authenticated |
 | PUT | `/api/orders/{id}/status` | Admin |
@@ -121,8 +134,10 @@ All responses follow a standard envelope:
 
 ## Architecture Notes
 
-- **Stock protection**: order creation uses an atomic conditional `UPDATE ... WHERE stock_quantity >= quantity` for each item, preventing overselling under concurrent requests — verified with unit tests simulating the insufficient-stock case.
+- **Stock protection**: order creation (both manual and cart checkout) uses an atomic conditional `UPDATE ... WHERE stock_quantity >= quantity` for each item, preventing overselling under concurrent requests — verified with unit tests simulating the insufficient-stock case.
 - **Order integrity**: totals are always computed server-side from the current product price, never trusted from the client. Shipping addresses are snapshotted into the order at checkout time, so later edits to a saved address never alter historical orders.
+- **Cart design**: a single `CartItem` table keyed by `(user_id, product_id)` — no separate `Cart` entity needed, since each user has exactly one implicit cart. Adding an already-present product merges quantities rather than duplicating rows.
+- **Ownership checks**: cart items and addresses return a `404` (not `403`) when a user tries to access someone else's resource by ID — avoids confirming that a given ID exists at all.
 - **Webhook security**: Paystack webhook payloads are verified via HMAC-SHA512 signature before processing, and an idempotency table prevents duplicate event processing on retried webhooks.
 
 ## Testing
@@ -138,3 +153,4 @@ Covers `ProductService` (CRUD, atomic stock decrement) and `OrderService` (multi
 
 This repository is backend-only. A companion React frontend consumes this API (not included here).
 ```
+
