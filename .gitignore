@@ -20,3 +20,4 @@ out/
 application-secrets.yml
 
 src/main/resources/application.yml
+.env

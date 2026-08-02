@@ -6,9 +6,9 @@ spring:
     name: ecommerce-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/ecommerce_db
-    username: postgres
-    password: Olamide310
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ecommerce_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:your_local_postgres_password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -25,9 +25,9 @@ springdoc:
   default-produces-media-type: application/json
 
 jwt:
-  secret: "change-this-to-a-long-random-string-at-least-32-characters-long"
+  secret: ${JWT_SECRET:change-this-to-a-long-random-string-at-least-32-characters-long}
   expiration-ms: 86400000  # 24 hours
 
 paystack:
-  secret-key: "sk_test_3a57061820f50451cd6f141249ea7c4088296f20"
+  secret-key: ${PAYSTACK_SECRET_KEY:your_paystack_test_secret_key_here}
   base-url: "https://api.paystack.co"
