@@ -7,8 +7,8 @@ import lombok.Data;
 @Data
 public class ResetPasswordRequest {
 
-    @NotBlank(message = "Token is required")
-    private String token;
+    @NotBlank(message = "Reset code is required")
+    private String code;
 
     @NotBlank(message = "New password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")

@@ -3,6 +3,7 @@ package com.Group2.Ecommerce.Auth;
 import com.Group2.Ecommerce.Auth.Dto.AuthResponse;
 import com.Group2.Ecommerce.Auth.Dto.LoginRequest;
 import com.Group2.Ecommerce.Auth.Dto.RegisterRequest;
+import com.Group2.Ecommerce.Common.BrevoEmailService;
 import com.Group2.Ecommerce.User.Role;
 import com.Group2.Ecommerce.User.User;
 import com.Group2.Ecommerce.User.UserRepository;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 import java.util.UUID;
 
 @Service
@@ -25,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final BrevoEmailService brevoEmailService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -56,42 +59,44 @@ public class AuthService {
     }
 
     /**
-     * Generates a reset token for the given email.
-     * IMPORTANT — dev-mode shortcut: this returns the raw token directly in
-     * the response so you can test the flow without email/SMTP set up. In
-     * production, never return this — instead email the user a link like
-     * https://yourapp.com/reset-password?token=... and return nothing here
-     * except a generic "check your email" message. Returning the token
-     * directly, as done now, would let anyone reset any account's password
-     * just by knowing their email address.
+     * Generates a 6-digit reset code and emails it to the user via Brevo.
+     * The code is never returned in the response — only a generic message.
+     * When Brevo isn't configured yet (dev mode), the code is logged instead
+     * of emailed so the flow stays testable.
      */
     @Transactional
     public String forgotPassword(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("No account found with that email"));
 
+        String code = String.format("%06d", new Random().nextInt(1_000_000));
+
         PasswordResetToken resetToken = new PasswordResetToken();
-        resetToken.setToken(UUID.randomUUID().toString());
+        resetToken.setToken(code);
         resetToken.setUser(user);
         resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
         resetToken.setUsed(false);
 
         passwordResetTokenRepository.save(resetToken);
 
-        return resetToken.getToken();
+        boolean emailed = brevoEmailService.sendPasswordResetCode(email, code);
+
+        return emailed
+                ? "Password reset code sent to your email"
+                : "Password reset code generated (dev mode — check server logs)";
     }
 
     @Transactional
-    public void resetPassword(String token, String newPassword) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalStateException("Invalid or expired reset token"));
+    public void resetPassword(String code, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(code)
+                .orElseThrow(() -> new IllegalStateException("Invalid or expired reset code"));
 
         if (resetToken.isUsed()) {
-            throw new IllegalStateException("This reset token has already been used");
+            throw new IllegalStateException("This reset code has already been used");
         }
 
         if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("This reset token has expired");
+            throw new IllegalStateException("This reset code has expired");
         }
 
         User user = resetToken.getUser();
@@ -100,5 +105,25 @@ public class AuthService {
 
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
+    }
+
+    /**
+     * Creates or returns a user for Google OAuth2 logins. If an account with
+     * the same email already exists (password-registered or a previous Google
+     * login), it is returned so both sign-in methods share one account.
+     * New users get a random placeholder password since they can't sign in
+     * with a password.
+     */
+    @Transactional
+    public User findOrCreateOAuthUser(String email, String name) {
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setName(name);
+                    user.setEmail(email);
+                    user.setPasswordHash(UUID.randomUUID().toString());
+                    user.setRole(Role.CUSTOMER);
+                    return userRepository.save(user);
+                });
     }
 }

@@ -1,9 +1,22 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: ecommerce-backend
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your_google_client_id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your_google_client_secret}
+            scope:
+              - openid
+              - email
+              - profile
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ecommerce_db}
@@ -32,3 +45,12 @@ jwt:
 paystack:
   secret-key: ${PAYSTACK_SECRET_KEY:your_paystack_test_secret_key_here}
   base-url: "https://api.paystack.co"
+
+brevo:
+  api-key: ${BREVO_API_KEY:your_brevo_api_key}
+  sender-email: ${BREVO_SENDER_EMAIL:no-reply@example.com}
+  sender-name: ${BREVO_SENDER_NAME:Ecommerce}
+  base-url: "https://api.brevo.com"
+
+app:
+  frontend-url: ${FRONTEND_URL:https://e-commerce-frontend-coral-iota.vercel.app}

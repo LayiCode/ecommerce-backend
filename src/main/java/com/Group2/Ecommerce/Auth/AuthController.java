@@ -25,18 +25,17 @@ public class AuthController {
         return ApiResponse.success("Login successful", authService.login(request));
     }
 
-    // DEV MODE: returns the raw token in the response for testing without
-    // email set up. Replace this return value with a generic message in
-    // production, and send the token via email instead.
+    // Emails the reset code via Brevo — the code is never returned in the
+    // response (dev mode logs it when Brevo isn't configured yet).
     @PostMapping("/forgot-password")
     public ApiResponse<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        String token = authService.forgotPassword(request.getEmail());
-        return ApiResponse.success("Reset token generated (dev mode — normally emailed)", token);
+        String message = authService.forgotPassword(request.getEmail());
+        return ApiResponse.success(message, null);
     }
 
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request.getToken(), request.getNewPassword());
+        authService.resetPassword(request.getCode(), request.getNewPassword());
         return ApiResponse.success("Password reset successfully", null);
     }
 }
