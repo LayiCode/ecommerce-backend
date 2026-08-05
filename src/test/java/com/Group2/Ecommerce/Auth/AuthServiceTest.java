@@ -145,27 +145,4 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any());
     }
-
-    @Test
-    void findOrCreateOAuthUser_returnsExistingUser_whenEmailAlreadyRegistered() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-
-        User result = authService.findOrCreateOAuthUser("test@example.com", "Different Name");
-
-        assertThat(result).isSameAs(user);
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void findOrCreateOAuthUser_createsCustomer_whenEmailIsNew() {
-        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        User result = authService.findOrCreateOAuthUser("new@example.com", "New User");
-
-        assertThat(result.getEmail()).isEqualTo("new@example.com");
-        assertThat(result.getName()).isEqualTo("New User");
-        assertThat(result.getRole()).isEqualTo(Role.CUSTOMER);
-        assertThat(result.getPasswordHash()).isNotBlank();
-    }
 }

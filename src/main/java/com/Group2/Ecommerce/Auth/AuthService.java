@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Random;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -105,25 +104,5 @@ public class AuthService {
 
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
-    }
-
-    /**
-     * Creates or returns a user for Google OAuth2 logins. If an account with
-     * the same email already exists (password-registered or a previous Google
-     * login), it is returned so both sign-in methods share one account.
-     * New users get a random placeholder password since they can't sign in
-     * with a password.
-     */
-    @Transactional
-    public User findOrCreateOAuthUser(String email, String name) {
-        return userRepository.findByEmail(email)
-                .orElseGet(() -> {
-                    User user = new User();
-                    user.setName(name);
-                    user.setEmail(email);
-                    user.setPasswordHash(UUID.randomUUID().toString());
-                    user.setRole(Role.CUSTOMER);
-                    return userRepository.save(user);
-                });
     }
 }
