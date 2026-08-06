@@ -45,8 +45,8 @@ public class BrevoEmailService {
                         "name", senderName,
                         "email", senderEmail),
                 "to", List.of(Map.of("email", toEmail)),
-                "subject", "Your Ecommerce password reset code",
-                "htmlContent", "<p>You requested a password reset.</p>"
+                "subject", "Your " + senderName + " password reset code",
+                "htmlContent", "<p>You requested a password reset on " + senderName + ".</p>"
                         + "<p>Your reset code is:</p>"
                         + "<h2 style=\"letter-spacing: 4px;\">" + code + "</h2>"
                         + "<p>This code expires in 30 minutes. "
