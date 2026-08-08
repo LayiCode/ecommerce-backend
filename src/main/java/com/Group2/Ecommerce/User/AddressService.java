@@ -28,6 +28,17 @@ public class AddressService {
     public AddressResponse create(AddressRequest request) {
         User currentUser = getCurrentUser();
 
+        Address existing = addressRepository
+                .findByUserIdAndFullNameAndLine1AndCityAndPostalCodeAndCountry(
+                        currentUser.getId(), request.getFullName(), request.getLine1(),
+                        request.getCity(), request.getPostalCode(), request.getCountry())
+                .orElse(null);
+
+        if (existing != null) {
+            applyRequest(existing, request);
+            return AddressResponse.fromEntity(addressRepository.save(existing));
+        }
+
         Address address = new Address();
         applyRequest(address, request);
         address.setUser(currentUser);
