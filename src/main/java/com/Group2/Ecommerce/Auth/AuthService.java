@@ -85,8 +85,24 @@ public class AuthService {
                 : "Password reset code generated (dev mode — check server logs)";
     }
 
+    @Transactional(readOnly = true)
+    public void verifyResetCode(String code) {
+        validateAndGetResetToken(code);
+    }
+
     @Transactional
     public void resetPassword(String code, String newPassword) {
+        PasswordResetToken resetToken = validateAndGetResetToken(code);
+
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+    }
+
+    private PasswordResetToken validateAndGetResetToken(String code) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(code)
                 .orElseThrow(() -> new IllegalStateException("Invalid or expired reset code"));
 
@@ -98,11 +114,6 @@ public class AuthService {
             throw new IllegalStateException("This reset code has expired");
         }
 
-        User user = resetToken.getUser();
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-
-        resetToken.setUsed(true);
-        passwordResetTokenRepository.save(resetToken);
+        return resetToken;
     }
 }

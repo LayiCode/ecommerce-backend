@@ -145,4 +145,55 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    @Test
+    void verifyResetCode_doesNotThrow_whenCodeValid() {
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken("123456");
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        resetToken.setUsed(false);
+
+        when(passwordResetTokenRepository.findByToken("123456")).thenReturn(Optional.of(resetToken));
+
+        authService.verifyResetCode("123456");
+
+        verify(passwordResetTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void verifyResetCode_throws_whenCodeUnknown() {
+        when(passwordResetTokenRepository.findByToken("000000")).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> authService.verifyResetCode("000000"));
+    }
+
+    @Test
+    void verifyResetCode_throws_whenCodeAlreadyUsed() {
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken("123456");
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        resetToken.setUsed(true);
+
+        when(passwordResetTokenRepository.findByToken("123456")).thenReturn(Optional.of(resetToken));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> authService.verifyResetCode("123456"));
+    }
+
+    @Test
+    void verifyResetCode_throws_whenCodeExpired() {
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken("123456");
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().minusMinutes(5));
+        resetToken.setUsed(false);
+
+        when(passwordResetTokenRepository.findByToken("123456")).thenReturn(Optional.of(resetToken));
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> authService.verifyResetCode("123456"));
+    }
 }

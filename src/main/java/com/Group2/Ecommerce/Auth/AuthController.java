@@ -33,6 +33,12 @@ public class AuthController {
         return ApiResponse.success(message, null);
     }
 
+    @PostMapping("/verify-reset-code")
+    public ApiResponse<Void> verifyResetCode(@Valid @RequestBody VerifyResetCodeRequest request) {
+        authService.verifyResetCode(request.getCode());
+        return ApiResponse.success("Reset code is valid", null);
+    }
+
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.getCode(), request.getNewPassword());
