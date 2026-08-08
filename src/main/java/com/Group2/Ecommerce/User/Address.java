@@ -38,7 +38,7 @@ public class Address {
     @Column(nullable = false)
     private String postalCode;
 
-    @Column(nullable = false, length = 2)
+    @Column(nullable = false, length = 100)
     private String country;
 
     private String phone;
