@@ -1,6 +1,8 @@
 package com.Group2.Ecommerce.Common.Exception;
 
 import com.Group2.Ecommerce.Common.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,9 +12,11 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -69,7 +73,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
+        log.error("Unhandled exception", ex);
+        Throwable root = NestedExceptionUtils.getMostSpecificCause(ex);
+        String message = (root != null && root.getMessage() != null) ? root.getMessage() : ex.getMessage();
+        if (root instanceof SQLException sqlEx) {
+            message = message + " [SQLState " + sqlEx.getSQLState() + "]";
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Something went wrong: " + ex.getMessage()));
+                .body(ApiResponse.error("Something went wrong: " + message));
     }
 }
