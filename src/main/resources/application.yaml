@@ -2,6 +2,10 @@ server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
 
+logging:
+  level:
+    org.springframework.security: DEBUG
+
 spring:
   application:
     name: ecommerce-backend
@@ -14,7 +18,6 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID:your_google_client_id}
             client-secret: ${GOOGLE_CLIENT_SECRET:your_google_client_secret}
             scope:
-              - openid
               - email
               - profile
 
