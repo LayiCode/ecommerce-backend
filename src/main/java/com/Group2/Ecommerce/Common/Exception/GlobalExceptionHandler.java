@@ -49,8 +49,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDuplicate(DataIntegrityViolationException ex) {
         String cause = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
         if (cause.toLowerCase().contains("too long")) {
+            log.warn("Value too long for a column", ex);
+            String maxLength = "";
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("varying\\((\\d+)\\)").matcher(cause);
+            if (matcher.find()) {
+                maxLength = " (max " + matcher.group(1) + " characters)";
+            }
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("A value is too long for one of the fields."));
+                    .body(ApiResponse.error("A value is too long for one of the fields" + maxLength + "."));
         }
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error("A record with this value already exists."));
@@ -80,8 +86,9 @@ public class GlobalExceptionHandler {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(err -> fieldErrors.put(err.getField(), err.getDefaultMessage()));
+        String detail = String.join(", ", fieldErrors.values());
         return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, "Validation failed", fieldErrors));
+                .body(new ApiResponse<>(false, "Validation failed: " + detail, fieldErrors));
     }
 
     @ExceptionHandler(Exception.class)

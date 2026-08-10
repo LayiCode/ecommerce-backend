@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -12,8 +13,10 @@ import java.math.BigDecimal;
 public class ProductRequest {
 
     @NotBlank(message = "Name is required")
+    @Size(max = 255, message = "Name must be 255 characters or fewer")
     private String name;
 
+    @Size(max = 2000, message = "Description must be 2000 characters or fewer")
     private String description;
 
     @NotNull(message = "Price is required")
@@ -24,6 +27,7 @@ public class ProductRequest {
     @Min(value = 0, message = "Stock quantity cannot be negative")
     private Integer stockQuantity;
 
+    @Size(max = 255, message = "Image URL must be 255 characters or fewer")
     private String imageUrl;
 
     @NotNull(message = "Category is required")
