@@ -17,6 +17,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -205,6 +208,30 @@ class OrderServiceTest {
         OrderResponse response = orderService.updateStatus(1L, OrderStatus.SHIPPED);
 
         assertThat(response.getStatus()).isEqualTo("SHIPPED");
+    }
+
+    @Test
+    void getAllOrders_returnsAllOrders_paginated() {
+        Order order1 = new Order();
+        order1.setId(1L);
+        order1.setUser(user);
+        order1.setStatus(OrderStatus.PENDING);
+        order1.setTotalAmount(new BigDecimal("10.00"));
+
+        Order order2 = new Order();
+        order2.setId(2L);
+        order2.setUser(user);
+        order2.setStatus(OrderStatus.PAID);
+        order2.setTotalAmount(new BigDecimal("20.00"));
+
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(orderRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(order1, order2)));
+
+        Page<OrderResponse> result = orderService.getAllOrders(pageable);
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo("PENDING");
+        assertThat(result.getContent().get(1).getStatus()).isEqualTo("PAID");
     }
 
     private OrderItemRequest itemRequest(Long productId, int quantity) {

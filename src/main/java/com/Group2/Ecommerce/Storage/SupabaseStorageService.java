@@ -25,6 +25,7 @@ public class SupabaseStorageService {
         this.url = url;
         this.bucket = bucket;
         this.restClient = RestClient.builder()
+                .baseUrl(url)
                 .defaultHeader("Authorization", "Bearer " + serviceRoleKey)
                 .defaultHeader("apikey", serviceRoleKey)
                 .build();
@@ -43,7 +44,7 @@ public class SupabaseStorageService {
 
         try {
             restClient.post()
-                    .uri("{base}/storage/v1/object/{bucket}/{name}", url, bucket, fileName)
+                    .uri("/storage/v1/object/{bucket}/{name}", bucket, fileName)
                     .contentType(MediaType.valueOf(contentType))
                     .body(bytes)
                     .retrieve()

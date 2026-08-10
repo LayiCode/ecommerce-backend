@@ -94,6 +94,10 @@ public class OrderService {
         return orderRepository.findByUserId(currentUser.getId(), pageable).map(OrderResponse::fromEntity);
     }
 
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable).map(OrderResponse::fromEntity);
+    }
+
     @Transactional
     public OrderResponse updateStatus(Long id, OrderStatus newStatus) {
         Order order = orderRepository.findById(id)
