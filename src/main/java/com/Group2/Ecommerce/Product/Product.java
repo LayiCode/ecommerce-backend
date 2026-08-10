@@ -31,6 +31,7 @@ public class Product {
     @Column(nullable = false)
     private Integer stockQuantity;
 
+    @Column(columnDefinition = "text")
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
