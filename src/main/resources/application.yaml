@@ -10,6 +10,11 @@ spring:
   application:
     name: ecommerce-backend
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   security:
     oauth2:
       client:
@@ -67,3 +72,8 @@ brevo:
 
 app:
   frontend-url: ${FRONTEND_URL:https://e-commerce-frontend-coral-iota.vercel.app}
+
+supabase:
+  url: ${SUPABASE_URL:}
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  bucket: ${SUPABASE_STORAGE_BUCKET:product-images}
