@@ -19,13 +19,12 @@ public class SupabaseStorageService {
     private final String url;
     private final String bucket;
 
-    public SupabaseStorageService(RestClient.Builder builder,
-                                  @Value("${supabase.url}") String url,
+    public SupabaseStorageService(@Value("${supabase.url}") String url,
                                   @Value("${supabase.service-role-key}") String serviceRoleKey,
                                   @Value("${supabase.bucket:product-images}") String bucket) {
         this.url = url;
         this.bucket = bucket;
-        this.restClient = builder
+        this.restClient = RestClient.builder()
                 .defaultHeader("Authorization", "Bearer " + serviceRoleKey)
                 .defaultHeader("apikey", serviceRoleKey)
                 .build();
