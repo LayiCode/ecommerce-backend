@@ -1,5 +1,6 @@
 package com.Group2.Ecommerce.Order;
 
+import com.Group2.Ecommerce.Cart.CartItemRepository;
 import com.Group2.Ecommerce.Common.Exception.OutOfStockException;
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Order.Dto.OrderItemRequest;
@@ -43,6 +44,12 @@ class OrderServiceTest {
 
     @Mock
     private AddressRepository addressRepository;
+
+    @Mock
+    private CartItemRepository cartItemRepository;
+
+    @Mock
+    private OrderEmailService orderEmailService;
 
     @InjectMocks
     private OrderService orderService;
@@ -208,6 +215,59 @@ class OrderServiceTest {
         OrderResponse response = orderService.updateStatus(1L, OrderStatus.SHIPPED);
 
         assertThat(response.getStatus()).isEqualTo("SHIPPED");
+    }
+
+    @Test
+    void updateStatus_sendsShippedEmail_whenStatusBecomesShipped() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUser(user);
+        order.setStatus(OrderStatus.PAID);
+        order.setTotalAmount(BigDecimal.TEN);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(1L, OrderStatus.SHIPPED);
+
+        verify(orderEmailService).sendShipped(order);
+        verify(orderEmailService, never()).sendReviewRequest(any(Order.class));
+    }
+
+    @Test
+    void updateStatus_sendsReviewEmail_whenStatusBecomesDelivered() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUser(user);
+        order.setStatus(OrderStatus.SHIPPED);
+        order.setTotalAmount(BigDecimal.TEN);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(1L, OrderStatus.DELIVERED);
+
+        verify(orderEmailService).sendReviewRequest(order);
+        verify(orderEmailService, never()).sendShipped(any(Order.class));
+    }
+
+    @Test
+    void updateStatus_sendsNoEmail_forOtherStatuses() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setUser(user);
+        order.setStatus(OrderStatus.PENDING);
+        order.setTotalAmount(BigDecimal.TEN);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.updateStatus(1L, OrderStatus.PAID);
+        orderService.updateStatus(1L, OrderStatus.CANCELLED);
+
+        verify(orderEmailService, never()).sendShipped(any(Order.class));
+        verify(orderEmailService, never()).sendReviewRequest(any(Order.class));
+        verify(orderEmailService, never()).sendConfirmation(any(Order.class));
     }
 
     @Test

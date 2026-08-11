@@ -2,6 +2,7 @@ package com.Group2.Ecommerce.Payment;
 
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Order.Order;
+import com.Group2.Ecommerce.Order.OrderEmailService;
 import com.Group2.Ecommerce.Order.OrderRepository;
 import com.Group2.Ecommerce.Order.OrderStatus;
 import com.Group2.Ecommerce.Payment.Dto.InitializePaymentRequest;
@@ -30,6 +31,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
+    private final OrderEmailService orderEmailService;
 
     @Value("${paystack.secret-key}")
     private String secretKey;
@@ -137,6 +139,10 @@ public class PaymentService {
 
         paymentRepository.save(payment);
         orderRepository.save(payment.getOrder());
+
+        if ("charge.success".equals(eventType)) {
+            orderEmailService.sendConfirmation(payment.getOrder());
+        }
 
         ProcessedWebhookEvent processed = new ProcessedWebhookEvent();
         processed.setReference(reference);

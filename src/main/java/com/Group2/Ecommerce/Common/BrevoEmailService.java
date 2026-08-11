@@ -40,17 +40,34 @@ public class BrevoEmailService {
             return false;
         }
 
+        String subject = "Your " + senderName + " password reset code";
+        String htmlContent = "<p>You requested a password reset on " + senderName + ".</p>"
+                + "<p>Your reset code is:</p>"
+                + "<h2 style=\"letter-spacing: 4px;\">" + code + "</h2>"
+                + "<p>This code expires in 30 minutes. "
+                + "If you didn't request this, you can ignore this email.</p>";
+
+        return sendTransactionalEmail(toEmail, subject, htmlContent);
+    }
+
+    /**
+     * Sends a transactional email via Brevo. Best-effort: returns false
+     * (and only logs) when Brevo isn't configured yet or the request fails,
+     * so callers can never break a business flow because of email.
+     */
+    public boolean sendTransactionalEmail(String toEmail, String subject, String htmlContent) {
+        if (!isConfigured()) {
+            log.info("[DEV MODE] Email for {} [{}]: {}", toEmail, subject, htmlContent);
+            return false;
+        }
+
         Map<String, Object> body = Map.of(
                 "sender", Map.of(
                         "name", senderName,
                         "email", senderEmail),
                 "to", List.of(Map.of("email", toEmail)),
-                "subject", "Your " + senderName + " password reset code",
-                "htmlContent", "<p>You requested a password reset on " + senderName + ".</p>"
-                        + "<p>Your reset code is:</p>"
-                        + "<h2 style=\"letter-spacing: 4px;\">" + code + "</h2>"
-                        + "<p>This code expires in 30 minutes. "
-                        + "If you didn't request this, you can ignore this email.</p>"
+                "subject", subject,
+                "htmlContent", htmlContent
         );
 
         try {
@@ -66,10 +83,10 @@ public class BrevoEmailService {
                     .retrieve()
                     .toBodilessEntity();
 
-            log.info("Password reset email sent to {}", toEmail);
+            log.info("Transactional email sent to {} [{}]", toEmail, subject);
             return true;
         } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send transactional email to {} [{}]: {}", toEmail, subject, e.getMessage());
             return false;
         }
     }

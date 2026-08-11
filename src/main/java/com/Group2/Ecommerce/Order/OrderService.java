@@ -31,6 +31,7 @@ public class OrderService {
     private final ProductService productService;
     private final AddressRepository addressRepository;
     private final CartItemRepository cartItemRepository;
+    private final OrderEmailService orderEmailService;
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
@@ -105,6 +106,13 @@ public class OrderService {
 
         order.setStatus(newStatus);
         Order saved = orderRepository.save(order);
+
+        switch (newStatus) {
+            case SHIPPED -> orderEmailService.sendShipped(saved);
+            case DELIVERED -> orderEmailService.sendReviewRequest(saved);
+            default -> {
+            }
+        }
 
         return OrderResponse.fromEntity(saved);
     }
