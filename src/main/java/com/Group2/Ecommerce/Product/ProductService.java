@@ -6,11 +6,19 @@ import com.Group2.Ecommerce.Common.Exception.OutOfStockException;
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Product.Dto.ProductRequest;
 import com.Group2.Ecommerce.Product.Dto.ProductResponse;
+import com.Group2.Ecommerce.Review.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +26,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
+    private final ReviewRepository reviewRepository;
 
     public Page<ProductResponse> search(String name, Long categoryId, Pageable pageable) {
         String query = (name == null) ? "" : name;
@@ -29,11 +38,45 @@ public class ProductService {
             page = productRepository.findByNameContainingIgnoreCase(query, pageable);
         }
 
-        return page.map(ProductResponse::fromEntity);
+        if (page.isEmpty()) {
+            return page.map(ProductResponse::fromEntity);
+        }
+
+        List<Long> ids = page.getContent().stream().map(Product::getId).toList();
+        Map<Long, Object[]> aggregates = aggregateRatings(ids);
+        return page.map(product -> {
+            ProductResponse response = ProductResponse.fromEntity(product);
+            applyRating(response, aggregates.get(product.getId()));
+            return response;
+        });
     }
 
     public ProductResponse getById(Long id) {
-        return ProductResponse.fromEntity(findEntityById(id));
+        ProductResponse response = ProductResponse.fromEntity(findEntityById(id));
+        Map<Long, Object[]> aggregates = aggregateRatings(Collections.singletonList(id));
+        applyRating(response, aggregates.get(id));
+        return response;
+    }
+
+    private Map<Long, Object[]> aggregateRatings(List<Long> productIds) {
+        return reviewRepository.aggregateByProductIds(productIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> row,
+                        (a, b) -> a
+                ));
+    }
+
+    private void applyRating(ProductResponse response, Object[] aggregate) {
+        if (aggregate == null) {
+            response.setRating(null);
+            response.setReviewCount(0);
+            return;
+        }
+        long count = ((Number) aggregate[1]).longValue();
+        double avg = ((Number) aggregate[2]).doubleValue();
+        response.setReviewCount(count);
+        response.setRating(BigDecimal.valueOf(avg).setScale(1, RoundingMode.HALF_UP));
     }
 
    public Product findEntityById(Long id) {

@@ -20,6 +20,8 @@ public class ProductResponse {
     private String imageUrl;
     private Long categoryId;
     private String categoryName;
+    private BigDecimal rating;
+    private long reviewCount;
 
     public static ProductResponse fromEntity(Product product) {
         ProductResponse response = new ProductResponse();

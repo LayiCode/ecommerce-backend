@@ -6,14 +6,21 @@ import com.Group2.Ecommerce.Common.Exception.OutOfStockException;
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Product.Dto.ProductRequest;
 import com.Group2.Ecommerce.Product.Dto.ProductResponse;
+import com.Group2.Ecommerce.Review.ReviewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +37,9 @@ class ProductServiceTest {
 
     @Mock
     private CategoryService categoryService;
+
+    @Mock
+    private ReviewRepository reviewRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -60,6 +70,54 @@ class ProductServiceTest {
         assertThat(response.getId()).isEqualTo(1L);
         assertThat(response.getName()).isEqualTo("Wireless Headphones");
         assertThat(response.getCategoryName()).isEqualTo("Electronics");
+    }
+
+    @Test
+    void getById_includesRatingAggregate_whenReviewsExist() {
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(reviewRepository.aggregateByProductIds(Collections.singletonList(1L)))
+                .thenReturn(List.<Object[]>of(new Object[]{1L, 2L, 4.5d}));
+
+        ProductResponse response = productService.getById(1L);
+
+        assertThat(response.getRating()).isEqualByComparingTo("4.5");
+        assertThat(response.getReviewCount()).isEqualTo(2);
+    }
+
+    @Test
+    void search_includesRatingAggregates_forPageResults() {
+        Product product2 = new Product();
+        product2.setId(2L);
+        product2.setName("Speaker");
+        product2.setPrice(new BigDecimal("49.99"));
+        product2.setStockQuantity(5);
+        product2.setCategory(category);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        when(productRepository.findByNameContainingIgnoreCase("", pageable))
+                .thenReturn(new PageImpl<>(List.of(product, product2), pageable, 2));
+        when(reviewRepository.aggregateByProductIds(List.of(1L, 2L)))
+                .thenReturn(List.<Object[]>of(new Object[]{1L, 3L, 5.0d}, new Object[]{2L, 1L, 4.0d}));
+
+        Page<ProductResponse> responses = productService.search(null, null, pageable);
+
+        assertThat(responses.getContent()).hasSize(2);
+        assertThat(responses.getContent().get(0).getRating()).isEqualByComparingTo("5.0");
+        assertThat(responses.getContent().get(0).getReviewCount()).isEqualTo(3);
+        assertThat(responses.getContent().get(1).getRating()).isEqualByComparingTo("4.0");
+        assertThat(responses.getContent().get(1).getReviewCount()).isEqualTo(1);
+    }
+
+    @Test
+    void search_skipsAggregation_whenPageEmpty() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(productRepository.findByNameContainingIgnoreCase("", pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0));
+
+        Page<ProductResponse> responses = productService.search(null, null, pageable);
+
+        assertThat(responses.getContent()).isEmpty();
+        verify(reviewRepository, never()).aggregateByProductIds(any());
     }
 
     @Test

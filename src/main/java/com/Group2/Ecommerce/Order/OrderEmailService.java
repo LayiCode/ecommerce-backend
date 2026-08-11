@@ -47,7 +47,7 @@ public class OrderEmailService {
         StringBuilder products = new StringBuilder();
         for (OrderItem item : order.getItems()) {
             String name = HtmlUtils.htmlEscape(item.getProduct().getName());
-            String url = frontendUrl + "/products/" + item.getProduct().getId();
+            String url = frontendUrl + "/products/" + item.getProduct().getId() + "#reviews";
             products.append("<li><a href=\"").append(url).append("\">").append(name).append("</a></li>");
         }
         String html = "<p>Hi " + HtmlUtils.htmlEscape(order.getUser().getName()) + ",</p>"
