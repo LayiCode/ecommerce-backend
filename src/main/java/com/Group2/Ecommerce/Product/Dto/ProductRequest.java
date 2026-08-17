@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class ProductRequest {
@@ -31,4 +33,6 @@ public class ProductRequest {
 
     @NotNull(message = "Category is required")
     private Long categoryId;
+
+    private List<ProductImageRequest> colorVariants = new ArrayList<>();
 }
