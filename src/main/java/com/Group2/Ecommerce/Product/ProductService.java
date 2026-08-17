@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -130,5 +131,23 @@ public class ProductService {
         product.setStockQuantity(request.getStockQuantity());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(category);
+
+        product.getImages().clear();
+        if (request.getColorVariants() != null) {
+            for (int i = 0; i < request.getColorVariants().size(); i++) {
+                var variant = request.getColorVariants().get(i);
+                if (variant.getImageUrl() == null || variant.getImageUrl().isBlank()) continue;
+                ProductImage image = new ProductImage();
+                image.setProduct(product);
+                image.setImageUrl(variant.getImageUrl());
+                image.setColorName(variant.getColorName());
+                image.setSortOrder(i);
+                product.getImages().add(image);
+            }
+        }
+
+        if (product.getImageUrl() == null && !product.getImages().isEmpty()) {
+            product.setImageUrl(product.getImages().get(0).getImageUrl());
+        }
     }
 }
