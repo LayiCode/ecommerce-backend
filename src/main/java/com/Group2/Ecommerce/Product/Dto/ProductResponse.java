@@ -1,6 +1,7 @@
 package com.Group2.Ecommerce.Product.Dto;
 
 import com.Group2.Ecommerce.Product.Product;
+import com.Group2.Ecommerce.Product.ProductImage;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
