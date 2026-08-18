@@ -7,6 +7,7 @@ import com.Group2.Ecommerce.Order.OrderRepository;
 import com.Group2.Ecommerce.Order.OrderStatus;
 import com.Group2.Ecommerce.Payment.Dto.InitializePaymentRequest;
 import com.Group2.Ecommerce.Payment.Dto.InitializePaymentResponse;
+import com.Group2.Ecommerce.Payment.Dto.PaymentVerifyResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -147,6 +148,16 @@ public class PaymentService {
         ProcessedWebhookEvent processed = new ProcessedWebhookEvent();
         processed.setReference(reference);
         processedWebhookEventRepository.save(processed);
+    }
+
+    public PaymentVerifyResponse verify(String reference) {
+        Payment payment = paymentRepository.findByReference(reference)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+
+        return new PaymentVerifyResponse(
+                payment.getStatus().name(),
+                payment.getOrder().getId()
+        );
     }
 
     private JsonNode parseJson(String json) {
