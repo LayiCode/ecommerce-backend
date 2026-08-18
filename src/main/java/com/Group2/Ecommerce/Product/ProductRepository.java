@@ -10,14 +10,14 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Product> findByNameContainingIgnoreCaseAndCategoryId(
             String name, Long categoryId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"images", "category"})
+    @EntityGraph(attributePaths = {"category"})
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
     /**
