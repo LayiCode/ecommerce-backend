@@ -1,6 +1,7 @@
 package com.Group2.Ecommerce.Review;
 
 import com.Group2.Ecommerce.Common.ApiResponse;
+import com.Group2.Ecommerce.Review.Dto.ProductReviewSummary;
 import com.Group2.Ecommerce.Review.Dto.ReviewRequest;
 import com.Group2.Ecommerce.Review.Dto.ReviewResponse;
 import jakarta.validation.Valid;
@@ -20,12 +21,12 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @GetMapping("/products/{productId}/reviews")
-    public ApiResponse<Page<ReviewResponse>> getByProduct(
+    public ApiResponse<ProductReviewSummary> getByProduct(
             @PathVariable Long productId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "100") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ApiResponse.success(reviewService.getByProduct(productId, pageable));
+        return ApiResponse.success(reviewService.getSummary(productId, pageable));
     }
 
     @GetMapping("/reviews/mine")
