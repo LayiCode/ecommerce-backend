@@ -5,8 +5,10 @@ import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
 import com.Group2.Ecommerce.Order.OrderRepository;
 import com.Group2.Ecommerce.Product.Product;
 import com.Group2.Ecommerce.Product.ProductService;
+import com.Group2.Ecommerce.Review.Dto.ProductReviewSummary;
 import com.Group2.Ecommerce.Review.Dto.ReviewRequest;
 import com.Group2.Ecommerce.Review.Dto.ReviewResponse;
+import com.Group2.Ecommerce.User.Role;
 import com.Group2.Ecommerce.User.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -52,6 +54,33 @@ public class ReviewService {
                 .map(ReviewResponse::fromEntity);
     }
 
+    public ProductReviewSummary getSummary(Long productId, Pageable pageable) {
+        productService.findEntityById(productId);
+        Page<ReviewResponse> reviews = reviewRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable)
+                .map(ReviewResponse::fromEntity);
+
+        Double avg = reviewRepository.averageRatingByProductId(productId);
+        boolean canReview = false;
+        ReviewResponse myReview = null;
+
+        try {
+            User currentUser = getCurrentUser();
+            Optional<Review> mine = reviewRepository.findByProductIdAndUserId(productId, currentUser.getId());
+            myReview = mine.map(ReviewResponse::fromEntity).orElse(null);
+            canReview = !mine.isPresent() && orderRepository.hasDeliveredOrderForProduct(currentUser.getId(), productId);
+        } catch (Exception ignored) {
+            // Not authenticated — leave defaults
+        }
+
+        return new ProductReviewSummary(
+                reviews,
+                avg != null ? avg : 0,
+                reviews.getTotalElements(),
+                canReview,
+                myReview
+        );
+    }
+
     public ReviewResponse getMine(Long productId) {
         User currentUser = getCurrentUser();
         Optional<Review> review = reviewRepository.findByProductIdAndUserId(productId, currentUser.getId());
@@ -67,7 +96,17 @@ public class ReviewService {
 
     @Transactional
     public void delete(Long id) {
-        Review review = findOwned(id);
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found: " + id));
+
+        User currentUser = getCurrentUser();
+        boolean isOwner = review.getUser().getId().equals(currentUser.getId());
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenException("You can only delete your own reviews");
+        }
+
         reviewRepository.delete(review);
     }
 
