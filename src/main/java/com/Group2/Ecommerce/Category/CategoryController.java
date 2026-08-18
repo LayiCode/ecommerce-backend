@@ -30,4 +30,15 @@ public class CategoryController {
     public ApiResponse<Category> create(@Valid @RequestBody Category category) {
         return ApiResponse.success("Category created", categoryService.create(category));
     }
+
+    @PutMapping("/{id}")
+    public ApiResponse<Category> update(@PathVariable Long id, @Valid @RequestBody Category category) {
+        return ApiResponse.success("Category updated", categoryService.update(id, category));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        categoryService.delete(id);
+        return ApiResponse.success("Category deleted", null);
+    }
 }

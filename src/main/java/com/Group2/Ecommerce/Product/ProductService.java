@@ -4,6 +4,7 @@ import com.Group2.Ecommerce.Category.Category;
 import com.Group2.Ecommerce.Category.CategoryService;
 import com.Group2.Ecommerce.Common.Exception.OutOfStockException;
 import com.Group2.Ecommerce.Common.Exception.ResourceNotFoundException;
+import com.Group2.Ecommerce.Order.OrderItemRepository;
 import com.Group2.Ecommerce.Product.Dto.ProductRequest;
 import com.Group2.Ecommerce.Product.Dto.ProductResponse;
 import com.Group2.Ecommerce.Review.ReviewRepository;
@@ -28,6 +29,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final ReviewRepository reviewRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public Page<ProductResponse> search(String name, Long categoryId, Pageable pageable) {
         String query = (name == null) ? "" : name;
@@ -108,6 +110,12 @@ public class ProductService {
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product not found: " + id);
+        }
+        if (reviewRepository.existsByProductId(id)) {
+            throw new IllegalStateException("Cannot delete product that has reviews.");
+        }
+        if (orderItemRepository.existsByProductId(id)) {
+            throw new IllegalStateException("Cannot delete product that has been ordered.");
         }
         productRepository.deleteById(id);
     }
