@@ -117,6 +117,28 @@ public class OrderService {
         return OrderResponse.fromEntity(saved);
     }
 
+    @Transactional
+    public OrderResponse cancelOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + id));
+
+        User currentUser = getCurrentUser();
+        if (!order.getUser().getId().equals(currentUser.getId())) {
+            throw new ResourceNotFoundException("Order not found: " + id);
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PAID) {
+            throw new IllegalStateException("Order cannot be cancelled in " + order.getStatus() + " status");
+        }
+
+        for (var item : order.getItems()) {
+            productService.restoreStock(item.getProduct().getId(), item.getQuantity());
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        return OrderResponse.fromEntity(orderRepository.save(order));
+    }
+
     // --- shared helpers used by both createOrder and checkoutFromCart ---
 
     private Order buildOrderShell(User currentUser, Address address) {
