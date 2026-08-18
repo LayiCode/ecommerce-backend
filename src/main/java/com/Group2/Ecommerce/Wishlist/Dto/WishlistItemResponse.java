@@ -18,6 +18,7 @@ public class WishlistItemResponse {
     private String productName;
     private BigDecimal productPrice;
     private String productImageUrl;
+    private Integer stockQuantity;
     private LocalDateTime createdAt;
 
     public static WishlistItemResponse fromEntity(WishlistItem item) {
@@ -27,6 +28,7 @@ public class WishlistItemResponse {
                 item.getProduct().getName(),
                 item.getProduct().getPrice(),
                 item.getProduct().getImageUrl(),
+                item.getProduct().getStockQuantity(),
                 item.getCreatedAt()
         );
     }
