@@ -3,6 +3,7 @@ package com.Group2.Ecommerce.Payment;
 import com.Group2.Ecommerce.Common.ApiResponse;
 import com.Group2.Ecommerce.Payment.Dto.InitializePaymentRequest;
 import com.Group2.Ecommerce.Payment.Dto.InitializePaymentResponse;
+import com.Group2.Ecommerce.Payment.Dto.PaymentVerifyResponse;
 import com.Group2.Ecommerce.User.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,5 +40,10 @@ public class PaymentController {
 
         paymentService.handleWebhook(payload);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/verify/{reference}")
+    public ApiResponse<PaymentVerifyResponse> verify(@PathVariable String reference) {
+        return ApiResponse.success(paymentService.verify(reference));
     }
 }
