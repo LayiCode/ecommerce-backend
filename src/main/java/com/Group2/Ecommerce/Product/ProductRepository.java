@@ -2,6 +2,7 @@ package com.Group2.Ecommerce.Product;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -9,12 +10,14 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // Search by name (case-insensitive) and optionally filter by category, paginated.
+    @EntityGraph(attributePaths = {"images", "category"})
     Page<Product> findByNameContainingIgnoreCaseAndCategoryId(
             String name, Long categoryId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"images", "category"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"images", "category"})
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
     /**
