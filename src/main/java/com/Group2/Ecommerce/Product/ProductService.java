@@ -124,6 +124,11 @@ public class ProductService {
         }
     }
 
+    @Transactional
+    public void restoreStock(Long productId, int quantity) {
+        productRepository.restoreStock(productId, quantity);
+    }
+
     private void applyRequest(Product product, ProductRequest request, Category category) {
         product.setName(request.getName());
         product.setDescription(request.getDescription());
